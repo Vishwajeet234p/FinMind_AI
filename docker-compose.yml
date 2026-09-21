@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with TimescaleDB for Financial Time-Series Data
+  postgres:
+    image: timescale/timescaledb:latest-pg15
+    container_name: finmind_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: finmind_user
+      POSTGRES_PASSWORD: finmind_password
+      POSTGRES_DB: finmind_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Redis for High-Performance Caching & Live Quote Session Storage
+  redis:
+    image: redis:7-alpine
+    container_name: finmind_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:

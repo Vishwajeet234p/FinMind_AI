@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FinMind AI - Financial Intelligence Terminal</title>
+    <link rel="stylesheet" href="/dashboard/styles.css" />
+    <script src="/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="terminal-bg">
+    <!-- Top Navigation Bar -->
+    <nav class="topbar">
+      <div class="topbar-brand">
+        <span class="brand-icon">📈</span>
+        <span class="brand-name"
+          >FinMind <span class="brand-accent">AI</span></span
+        >
+      </div>
+      <div class="ticker-selector">
+        <button class="ticker-btn active" onclick="selectTicker('AAPL')">
+          AAPL
+        </button>
+        <button class="ticker-btn" onclick="selectTicker('TSLA')">TSLA</button>
+        <button class="ticker-btn" onclick="selectTicker('NVDA')">NVDA</button>
+        <button class="ticker-btn" onclick="selectTicker('MSFT')">MSFT</button>
+        <button class="ticker-btn" onclick="selectTicker('GOOGL')">
+          GOOGL
+        </button>
+      </div>
+      <div class="topbar-right">
+        <div id="live-badge" class="live-badge">● LIVE</div>
+        <button onclick="openAuthModal()" class="auth-btn" id="auth-btn">
+          🔐 Login
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main Dashboard Grid -->
+    <main class="dashboard-grid">
+      <!-- Left Column: Stock Info + Chart -->
+      <div class="left-col">
+        <!-- Stock Header Card -->
+        <div class="card stock-header-card">
+          <div class="stock-header-left">
+            <div id="company-name" class="company-name">Apple Inc.</div>
+            <div id="ticker-badge" class="ticker-badge">AAPL</div>
+            <div id="sector-tag" class="sector-tag">Technology</div>
+          </div>
+          <div class="stock-header-right">
+            <div id="live-price" class="live-price">$336.13</div>
+            <div id="price-change" class="price-change bearish">
+              ▼ -$2.73 (-0.81%)
+            </div>
+          </div>
+        </div>
+
+        <!-- Price Chart Card -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <span class="card-title">📊 Historical Price Chart</span>
+            <div class="chart-controls">
+              <button
+                class="ctrl-btn active"
+                onclick="loadChartData(activeTicker, 30)"
+              >
+                1M
+              </button>
+              <button
+                class="ctrl-btn"
+                onclick="loadChartData(activeTicker, 90)"
+              >
+                3M
+              </button>
+              <button
+                class="ctrl-btn"
+                onclick="loadChartData(activeTicker, 180)"
+              >
+                6M
+              </button>
+            </div>
+          </div>
+          <canvas id="price-chart" height="200"></canvas>
+        </div>
+      </div>
+
+      <!-- Middle Column: ML Prediction + Sentiment -->
+      <div class="middle-col">
+        <!-- LSTM Forecast Card -->
+        <div class="card forecast-card">
+          <div class="card-header">
+            <span class="card-title">🧠 PyTorch LSTM Forecast</span>
+            <button class="run-btn" onclick="runForecast()">▶ Run</button>
+          </div>
+          <div class="forecast-content">
+            <div class="forecast-row">
+              <span class="forecast-label">Last Actual Price</span>
+              <span id="fc-actual" class="forecast-value">$336.13</span>
+            </div>
+            <div class="forecast-row">
+              <span class="forecast-label">Predicted Price</span>
+              <span id="fc-predicted" class="forecast-value accent"
+                >$333.40</span
+              >
+            </div>
+            <div class="forecast-row">
+              <span class="forecast-label">Change</span>
+              <span id="fc-change" class="forecast-value bearish"
+                >-$2.73 (-0.81%)</span
+              >
+            </div>
+            <div class="forecast-row">
+              <span class="forecast-label">Trend Signal</span>
+              <span id="fc-signal" class="signal-badge bearish-badge"
+                >BEARISH</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- FinBERT Sentiment Card -->
+        <div class="card sentiment-card">
+          <div class="card-header">
+            <span class="card-title">📰 FinBERT Sentiment</span>
+            <button class="run-btn" onclick="analyzeSentiment()">
+              ▶ Analyze
+            </button>
+          </div>
+          <div id="sentiment-input-area">
+            <textarea
+              id="headline-input"
+              placeholder="Paste a financial headline here..."
+            ></textarea>
+          </div>
+          <div id="sentiment-result" class="sentiment-result hidden">
+            <div class="sentiment-row">
+              <span class="sentiment-label">Sentiment</span>
+              <span id="sentiment-label-val" class="signal-badge">-</span>
+            </div>
+            <div class="sentiment-row">
+              <span class="sentiment-label">Confidence</span>
+              <span id="sentiment-conf" class="forecast-value">-</span>
+            </div>
+            <div class="sentiment-bars">
+              <div class="bar-row">
+                <span>Positive</span>
+                <div class="bar-bg">
+                  <div
+                    id="bar-pos"
+                    class="bar-fill bullish-bar"
+                    style="width: 0%"
+                  ></div>
+                </div>
+                <span id="pos-pct">0%</span>
+              </div>
+              <div class="bar-row">
+                <span>Negative</span>
+                <div class="bar-bg">
+                  <div
+                    id="bar-neg"
+                    class="bar-fill bearish-bar"
+                    style="width: 0%"
+                  ></div>
+                </div>
+                <span id="neg-pct">0%</span>
+              </div>
+              <div class="bar-row">
+                <span>Neutral</span>
+                <div class="bar-bg">
+                  <div
+                    id="bar-neu"
+                    class="bar-fill neutral-bar"
+                    style="width: 0%"
+                  ></div>
+                </div>
+                <span id="neu-pct">0%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Portfolio + AI Copilot -->
+      <div class="right-col">
+        <!-- Portfolio Card -->
+        <div class="card portfolio-card">
+          <div class="card-header">
+            <span class="card-title">💼 My Portfolio</span>
+            <button class="run-btn" onclick="showAddPosition()">+ Add</button>
+          </div>
+          <div id="portfolio-body">
+            <div class="portfolio-empty">🔐 Login to view your portfolio</div>
+          </div>
+        </div>
+
+        <!-- AI Copilot RAG Card -->
+        <div class="card copilot-card">
+          <div class="card-header">
+            <span class="card-title">💬 AI Copilot (RAG)</span>
+          </div>
+          <div id="copilot-chat" class="copilot-chat">
+            <div class="copilot-msg ai">
+              👋 Hi! Ask me anything about your stocks or SEC filings.
+            </div>
+          </div>
+          <div class="copilot-input-area">
+            <input
+              type="text"
+              id="copilot-input"
+              placeholder="Ask about Apple's risk factors..."
+              onkeydown="if (event.key === 'Enter') sendCopilotQuery();"
+            />
+            <button onclick="sendCopilotQuery()" class="send-btn">Send</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="modal hidden">
+      <div class="modal-box">
+        <div class="modal-tabs">
+          <button class="tab-btn active" onclick="switchTab('login')">
+            Login
+          </button>
+          <button class="tab-btn" onclick="switchTab('register')">
+            Register
+          </button>
+        </div>
+        <div id="login-tab">
+          <input
+            type="email"
+            id="login-email"
+            class="modal-input"
+            placeholder="Email"
+          />
+          <input
+            type="password"
+            id="login-password"
+            class="modal-input"
+            placeholder="Password"
+          />
+          <button onclick="doLogin()" class="modal-submit-btn">Login</button>
+        </div>
+        <div id="register-tab" class="hidden">
+          <input
+            type="text"
+            id="reg-name"
+            class="modal-input"
+            placeholder="Full Name"
+          />
+          <input
+            type="email"
+            id="reg-email"
+            class="modal-input"
+            placeholder="Email"
+          />
+          <input
+            type="password"
+            id="reg-password"
+            class="modal-input"
+            placeholder="Password"
+          />
+          <button onclick="doRegister()" class="modal-submit-btn">
+            Create Account
+          </button>
+        </div>
+        <p id="auth-error" class="auth-error hidden"></p>
+        <button onclick="closeAuthModal()" class="modal-close-btn">
+          ✕ Close
+        </button>
+      </div>
+    </div>
+
+    <script src="/dashboard/app.js"></script>
+  </body>
+</html>
